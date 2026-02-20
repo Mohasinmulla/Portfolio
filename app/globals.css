@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/* ===============================
+   ROOT VARIABLES
+================================ */
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  --font-heading: 'Orbitron', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+/* Light mode (optional fallback) */
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: #ffffff;
+    --foreground: #171717;
+  }
+}
+
+/* ===============================
+   GLOBAL STYLES
+================================ */
+
+body {
+  background: radial-gradient(
+    circle at top,
+    rgba(0, 255, 136, 0.05),
+    #000000 40%
+  );
+  color: var(--foreground);
+  font-family: var(--font-body);
+  margin: 0;
+  padding: 0;
+}
+
+/* Headings */
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+  letter-spacing: 0.05em;
+}
+
+/* ===============================
+   CYBER EFFECTS
+================================ */
+
+/* Glow Effect */
+.cyber-glow {
+  text-shadow:
+    0 0 5px #22c55e,
+    0 0 15px #22c55e,
+    0 0 30px #16a34a;
+}
+
+/* Role Flicker */
+.cyber-role {
+  animation: flicker 2.5s infinite;
+  text-shadow: 0 0 8px #22c55e;
+}
+
+/* Name Flicker (Subtle Premium) */
+.cyber-name {
+  animation: nameFlicker 3s infinite;
+}
+
+/* Dud characters (scramble effect) */
+.dud {
+  color: #22c55e;
+  opacity: 0.6;
+}
+
+/* ===============================
+   GLITCH EFFECT
+================================ */
+
+.glitch {
+  position: relative;
+  display: inline-block;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  width: 100%;
+  opacity: 0;
+}
+
+.glitch:hover::before {
+  color: #22c55e;
+  transform: translate(2px, -2px);
+  opacity: 0.7;
+}
+
+.glitch:hover::after {
+  color: #16a34a;
+  transform: translate(-2px, 2px);
+  opacity: 0.7;
+}
+
+/* ===============================
+   ANIMATIONS
+================================ */
+
+/* Flicker */
+@keyframes flicker {
+  0%, 18%, 22%, 25%, 53%, 57%, 100% {
+    opacity: 1;
+  }
+  20%, 24%, 55% {
+    opacity: 0.4;
+  }
+}
+
+/* Subtle Name Flicker */
+@keyframes nameFlicker {
+  0%, 18%, 22%, 25%, 53%, 57%, 100% {
+    opacity: 1;
+    text-shadow:
+      0 0 5px #22c55e,
+      0 0 15px #22c55e,
+      0 0 30px #16a34a;
+  }
+
+  20%, 24%, 55% {
+    opacity: 0.85;
+    text-shadow:
+      0 0 2px #22c55e,
+      0 0 8px #16a34a;
+  }
+}
+
+/* Optional Border Glow Animation */
+.animate-borderGlow {
+  background-size: 200% 200%;
+  animation: borderGlow 6s linear infinite;
+}
