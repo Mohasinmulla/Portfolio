@@ -1,7 +1,14 @@
 "use client"
 
 import { useEffect } from "react"
-import Lenis from "@studio-freight/lenis"
+import Lenis from "lenis"
+
+// Proper type extension instead of (window as any)
+declare global {
+  interface Window {
+    lenis: Lenis | null
+  }
+}
 
 export default function SmoothScroll({
   children,
@@ -14,18 +21,22 @@ export default function SmoothScroll({
       smoothWheel: true,
     })
 
+    window.lenis = lenis
+
+    let rafId: number
+
     function raf(time: number) {
       lenis.raf(time)
-      requestAnimationFrame(raf)
+      rafId = requestAnimationFrame(raf)
     }
 
-    requestAnimationFrame(raf)
+    rafId = requestAnimationFrame(raf)
 
-    // Make globally accessible
-    ;(window as any).lenis = lenis
-
+    // Proper cleanup — cancels RAF and destroys lenis instance
     return () => {
+      cancelAnimationFrame(rafId)
       lenis.destroy()
+      window.lenis = null
     }
   }, [])
 

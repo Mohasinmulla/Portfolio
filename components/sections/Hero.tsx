@@ -5,115 +5,122 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 import { Cpu, Wifi, Biohazard, Microchip } from "lucide-react"
 
-export default function Hero() {
+// TextScramble extracted to module scope — cleaner, no re-creation on render
+class TextScramble {
+  el: HTMLElement
+  chars: string
+  queue: { from: string; to: string; start: number; end: number; char?: string }[]
+  frameRequest: number
+  frame: number
+  resolve: ((value: void) => void) | null
 
-  const textRef = useRef<HTMLSpanElement | null>(null)
+  constructor(el: HTMLElement) {
+    this.el = el
+    this.chars = "!<>-_\\/[]{|}—=+*^?#ナニヌ"
+    this.queue = []
+    this.frameRequest = 0
+    this.frame = 0
+    this.resolve = null
+    this.update = this.update.bind(this)
+  }
 
-  /* ===============================
-     PREMIUM CYBER SCRAMBLE EFFECT
-  =============================== */
-  useEffect(() => {
-    class TextScramble {
-      el!: HTMLElement
-      chars!: string
-      queue: any[] = []
-      frameRequest: number = 0
-      frame: number = 0
-      resolve!: any
+  setText(newText: string): Promise<void> {
+    const oldText = this.el.innerText
+    const length = Math.max(oldText.length, newText.length)
+    const promise = new Promise<void>((resolve) => (this.resolve = resolve))
+    this.queue = []
 
-      constructor(el: HTMLElement) {
-        this.el = el
-        this.chars = "!<>-_\ナニヌ]{}—=+*^?#________" 
-        this.update = this.update.bind(this)
-      }
+    for (let i = 0; i < length; i++) {
+      const from = oldText[i] || ""
+      const to = newText[i] || ""
+      const start = Math.floor(Math.random() * 30)
+      const end = start + Math.floor(Math.random() * 40) + 20
+      this.queue.push({ from, to, start, end })
+    }
 
-      setText(newText: string) {
-        const oldText = this.el.innerText
-        const length = Math.max(oldText.length, newText.length)
-        const promise = new Promise((resolve) => (this.resolve = resolve))
-        this.queue = []
+    cancelAnimationFrame(this.frameRequest)
+    this.frame = 0
+    this.update()
+    return promise
+  }
 
-        for (let i = 0; i < length; i++) {
-          const from = oldText[i] || ""
-          const to = newText[i] || ""
-          const start = Math.floor(Math.random() * 30)
-          const end = start + Math.floor(Math.random() * 40) + 20
-          this.queue.push({ from, to, start, end })
+  update() {
+    let output = ""
+    let complete = 0
+
+    for (let i = 0; i < this.queue.length; i++) {
+      const { to, start, end } = this.queue[i]
+      let { from, char } = this.queue[i]
+
+      if (this.frame >= end) {
+        complete++
+        output += to
+      } else if (this.frame >= start) {
+        if (!char || Math.random() < 0.35) {
+          char = this.randomChar()
+          this.queue[i].char = char
         }
-
-        cancelAnimationFrame(this.frameRequest)
-        this.frame = 0
-        this.update()
-        return promise
-      }
-
-      update() {
-        let output = ""
-        let complete = 0
-
-        for (let i = 0; i < this.queue.length; i++) {
-          let { from, to, start, end, char } = this.queue[i]
-
-          if (this.frame >= end) {
-            complete++
-            output += to
-          } else if (this.frame >= start) {
-            if (!char || Math.random() < 0.35) {
-              char = this.randomChar()
-              this.queue[i].char = char
-            }
-            output += `<span class="dud">${char}</span>`
-          } else {
-            output += from
-          }
-        }
-
-        this.el.innerHTML = output
-
-        if (complete === this.queue.length) {
-          this.el.classList.add("glitch")
-          setTimeout(() => {
-            this.el.classList.remove("glitch")
-          }, 300)
-          this.resolve()
-        } else {
-          this.frameRequest = requestAnimationFrame(this.update)
-          this.frame += 0.7
-        }
-      }
-
-      randomChar() {
-        return this.chars[Math.floor(Math.random() * this.chars.length)]
+        output += `<span class="dud">${char}</span>`
+      } else {
+        output += from
       }
     }
 
-    const phrases = [
-      "IoT Developer",
-      "Robotics Engineer",
-      "Embedded Systems Developer"
-    ]
+    this.el.innerHTML = output
 
+    if (complete === this.queue.length) {
+      this.resolve?.()
+    } else {
+      this.frameRequest = requestAnimationFrame(this.update)
+      this.frame += 0.7
+    }
+  }
+
+  randomChar() {
+    return this.chars[Math.floor(Math.random() * this.chars.length)]
+  }
+
+  destroy() {
+    cancelAnimationFrame(this.frameRequest)
+  }
+}
+
+const phrases = ["IoT Developer", "Robotics Engineer", "Embedded Systems Developer"]
+
+export default function Hero() {
+  const textRef = useRef<HTMLSpanElement | null>(null)
+
+  useEffect(() => {
     const el = textRef.current
     if (!el) return
 
     const fx = new TextScramble(el)
     let counter = 0
+    let destroyed = false
+    let timeoutId: ReturnType<typeof setTimeout>
 
     const next = () => {
+      if (destroyed) return
       fx.setText(phrases[counter]).then(() => {
-        setTimeout(next, 2200)
+        timeoutId = setTimeout(next, 2200)
       })
       counter = (counter + 1) % phrases.length
     }
 
     next()
+
+    // Proper cleanup — stops animation and pending timeouts on unmount
+    return () => {
+      destroyed = true
+      clearTimeout(timeoutId)
+      fx.destroy()
+    }
   }, [])
 
   return (
     <>
       {/* Floating Icons */}
-      <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-
+      <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden" aria-hidden="true">
         <motion.div
           animate={{ y: [0, -25, 0], rotate: [0, 5, 0] }}
           transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
@@ -159,16 +166,19 @@ export default function Hero() {
             transition={{ duration: 0.9 }}
             className="relative flex items-center bg-white/[0.015] border border-green-400/20 rounded-3xl p-16 w-full backdrop-blur-[5px]"
           >
-
             {/* IMAGE */}
             <div className="w-1/3 flex justify-start">
               <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-green-500 blur-2xl opacity-40 animate-pulse"></div>
+                <div
+                  className="absolute inset-0 rounded-full bg-green-500 blur-2xl opacity-40 animate-pulse"
+                  aria-hidden="true"
+                />
                 <Image
                   src="/Mohasin.png"
-                  alt="Mohasin Mulla"
+                  alt="Mohasin Mulla, IoT and Robotics Engineer"
                   width={280}
                   height={280}
+                  priority
                   className="rounded-full border-4 border-green-400 object-cover relative z-10"
                 />
               </div>
@@ -176,8 +186,6 @@ export default function Hero() {
 
             {/* RIGHT CONTENT */}
             <div className="w-2/3 pl-12 flex flex-col">
-
-              {/* Thin Intro */}
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -187,34 +195,31 @@ export default function Hero() {
                 Hi, I am
               </motion.p>
 
-              {/* Name */}
               <h1 className="text-green-400 text-5xl font-bold cyber-glow cyber-name mb-4">
-
                 Mohasin Mulla
               </h1>
 
-              {/* Scramble Role */}
               <p className="text-xl text-green-300 tracking-wide">
-                I'm a <span ref={textRef} className="cyber-role" />
+                I&apos;m a{" "}
+                <span
+                  ref={textRef}
+                  className="cyber-role"
+                  aria-label="IoT Developer, Robotics Engineer, and Embedded Systems Developer"
+                />
               </p>
 
               <p className="text-sm text-gray-500 max-w-md mt-4">
                 Building intelligent systems with hardware + software integration.
               </p>
 
-               {/* Buttons Under Tagline */}
-
-          <div className="mt-20 flex gap-6">
-
-               <a
-                    href="/Mohasin_emb.pdf"
-                    download="Mohasin_Mulla_Resume.pdf"
-                    className="px-8 py-3 rounded-xl border border-green-400 text-green-300 hover:bg-green-500/30 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)] transition duration-300"
-                  >
-                    Download Resume
-                  </a>
-
-
+              <div className="mt-20 flex gap-6">
+                <a
+                  href="/Mohasin_emb.pdf"
+                  download="Mohasin_Mulla_Resume.pdf"
+                  className="px-8 py-3 rounded-xl border border-green-400 text-green-300 hover:bg-green-500/30 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)] transition duration-300"
+                >
+                  Download Resume
+                </a>
 
                 <a
                   href="#projects"
@@ -222,24 +227,11 @@ export default function Hero() {
                 >
                   View Projects →
                 </a>
-
-                  
-
-
-    </div>
-
-
-        </div>
-
-           
-
-
+              </div>
+            </div>
           </motion.div>
-
         </div>
-
       </section>
-
-          </>
+    </>
   )
 }
